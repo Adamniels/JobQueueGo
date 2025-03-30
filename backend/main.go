@@ -28,6 +28,7 @@ func setupRouter(queue *queue.JobQueue) *http.ServeMux {
 
 	mux.HandleFunc("/job", handlers.MakeJobHandler(queue))
 	mux.HandleFunc("/status", handlers.MakeStatusHandler(queue))
+	mux.HandleFunc("completedJobs", handlers.CompletedJobs)
 
 	mux.HandleFunc("/ws/worker", handlers.WorkerWebSocketHandler)
 

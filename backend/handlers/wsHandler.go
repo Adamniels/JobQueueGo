@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"JobQueueGo/utils"
+	"JobQueueGo/utils/resultstore"
 	"github.com/gorilla/websocket"
 )
 
@@ -71,6 +72,14 @@ func WorkerWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("  Job ID:   %s\n", result.JobId)
 		fmt.Printf("  Result:   %s\n", result.Result)
 		fmt.Printf("  Duration: %d ms\n", result.Duration)
+
+		// TODO: samma typ, borde kunna återanvända den?
+		resultstore.SaveResult(resultstore.Result{
+			Type:     result.Type,
+			JobId:    result.JobId,
+			Result:   result.Result,
+			Duration: result.Duration,
+		})
 
 		utils.SetWorkerFree(conn)
 
