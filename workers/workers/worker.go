@@ -3,7 +3,11 @@ package workers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -25,8 +29,8 @@ type Result struct {
 	Duration int64  `json:"duration"` // hur lång tid jobbet tog i ms
 }
 
-func Start() {
-	conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/worker", nil)
+func Start(wsURL string) {
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
 		log.Fatal("WebSocket connection failed:", err)
 	}
@@ -55,6 +59,8 @@ func Start() {
 
 		// Jobbtyper
 		switch job.Type {
+		case "execurl":
+			resultText = handleExecURLJob(job)
 		case "sleep":
 			time.Sleep(time.Duration(job.Duration) * time.Second)
 			resultText = fmt.Sprintf("Slept for %d seconds", job.Duration)
@@ -82,4 +88,36 @@ func Start() {
 		conn.WriteMessage(websocket.TextMessage, msg)
 		log.Println("Sent result:", string(msg))
 	}
+}
+
+// TODO: kolla på och förstå
+func handleExecURLJob(job Job) string {
+	filename := fmt.Sprintf("job_%s_exec.sh", job.Id)
+
+	// Ladda ner från URL
+	resp, err := http.Get(job.Input)
+	if err != nil {
+		return fmt.Sprintf("Download error: %s", err)
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filename)
+	if err != nil {
+		return fmt.Sprintf("File creation error: %s", err)
+	}
+	io.Copy(out, resp.Body)
+	out.Close()
+
+	os.Chmod(filename, 0o755)
+
+	// Kör filen
+	cmd := exec.Command("./" + filename)
+	output, err := cmd.CombinedOutput()
+	os.Remove(filename)
+
+	if err != nil {
+		return fmt.Sprintf("Exec error: %s\nOutput: %s", err, output)
+	}
+
+	return string(output)
 }

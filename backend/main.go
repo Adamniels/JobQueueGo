@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -19,6 +20,8 @@ func main() {
 
 	go matchWorkersWithJobs(jobQueue)
 
+	ipaddr, _ := getLocalIP()
+	fmt.Printf("listening on ip addr: %s, port: %s\n", ipaddr, "8080")
 	fmt.Println("Listening on https://localhost:8080")
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", router))
 }
@@ -59,4 +62,36 @@ func matchWorkersWithJobs(jobQueue *queue.JobQueue) {
 
 		fmt.Printf("Assigned job %s to worker %s\n", job.Id, worker.ID)
 	}
+}
+
+func getLocalIP() (string, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	for _, i := range interfaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if ip == nil || ip.IsLoopback() || ip.To4() == nil {
+				continue
+			}
+
+			return ip.String(), nil
+		}
+	}
+
+	return "", fmt.Errorf("no IP address found")
 }
