@@ -17,20 +17,18 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type Worker struct {
-	Conn *websocket.Conn
-	Busy bool
-	Id   string
-}
-
 type Result struct {
-	Type     string `json:"type"`     // "result"
+	RespType string `json:"restType"` // "result"
+	Type     string `json:"type"`     // "type of job"
 	JobId    string `json:"jobId"`    // koppla till rätt jobb
 	Result   string `json:"result"`   // valfritt: kan vara text, hash etc.
 	Duration int64  `json:"duration"` // hur lång tid jobbet tog i ms
 }
 
-var workers = make(map[*websocket.Conn]*Worker)
+var (
+	workers     = make(map[*websocket.Conn]*utils.Worker)
+	id      int = 0
+)
 
 func WorkerWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -38,7 +36,8 @@ func WorkerWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("WebSocket upgrade failed:", err)
 		return
 	}
-	worker := &utils.Worker{Conn: conn, Busy: false}
+	worker := &utils.Worker{Conn: conn, Busy: false, ID: utils.GenerateWorkerID()}
+	workers[conn] = worker
 	utils.AddWorker(worker)
 
 	defer func() {
@@ -67,13 +66,17 @@ func WorkerWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		// TODO: kanske göra switch case ifall worker kan returnera med än bara result
+
 		// det är ett giltigt JSON-resultat skriv ut resultatet
-		fmt.Printf("Result från worker:\n")
-		fmt.Printf("  Job ID:   %s\n", result.JobId)
-		fmt.Printf("  Result:   %s\n", result.Result)
-		fmt.Printf("  Duration: %d ms\n", result.Duration)
+		fmt.Printf("Result från worker %s:\n", worker.ID)
+		fmt.Printf("  Job type:  %s\n", result.Type)
+		fmt.Printf("  Job ID:    %s\n", result.JobId)
+		fmt.Printf("  Result:    %s\n", result.Result)
+		fmt.Printf("  Duration:  %d ms\n", result.Duration)
 
 		// TODO: samma typ, borde kunna återanvända den?
+		// TODO: Borde även ha med om det lyckades eller inte
 		resultstore.SaveResult(resultstore.Result{
 			Type:     result.Type,
 			JobId:    result.JobId,

@@ -1,4 +1,4 @@
-package main
+package workers
 
 import (
 	"encoding/json"
@@ -18,13 +18,14 @@ type Job struct {
 }
 
 type Result struct {
-	Type     string `json:"type"`     // "result"
+	RespType string `json:"respType"` // "result"
+	Type     string `json:"type"`
 	JobId    string `json:"jobId"`    // koppla till rätt jobb
 	Result   string `json:"result"`   // valfritt: kan vara text, hash etc.
 	Duration int64  `json:"duration"` // hur lång tid jobbet tog i ms
 }
 
-func main() {
+func Start() {
 	conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/ws/worker", nil)
 	if err != nil {
 		log.Fatal("WebSocket connection failed:", err)
@@ -70,7 +71,8 @@ func main() {
 
 		// Skicka tillbaka resultatet
 		result := Result{
-			Type:     "result",
+			RespType: "result",
+			Type:     job.Type,
 			JobId:    job.Id,
 			Result:   resultText,
 			Duration: elapsed,

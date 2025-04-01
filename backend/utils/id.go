@@ -16,3 +16,15 @@ func GenerateJobID() string {
 	jobCounter++
 	return fmt.Sprintf("job-%d", jobCounter)
 }
+
+var (
+	workerCounter     int64
+	workerCounterLock sync.Mutex
+)
+
+func GenerateWorkerID() string {
+	workerCounterLock.Lock()
+	defer workerCounterLock.Unlock()
+	workerCounter++
+	return fmt.Sprintf("worker-%d", workerCounter)
+}
