@@ -19,14 +19,17 @@ type Job struct {
 	Type     string `json:"type"`
 	Duration int    `json:"duration,omitempty"` // används för sleep
 	Input    string `json:"input,omitempty"`    // används för hash
+	Attempts int64  `json:"attempts,omitempty"`
 }
 
 type Result struct {
 	RespType string `json:"respType"` // "result"
 	Type     string `json:"type"`
-	JobId    string `json:"jobId"`    // koppla till rätt jobb
-	Result   string `json:"result"`   // valfritt: kan vara text, hash etc.
+	JobId    string `json:"jobId"` // koppla till rätt jobb
+	Result   string `json:"result"`
+	Input    string `json:"input"`
 	Duration int64  `json:"duration"` // hur lång tid jobbet tog i ms
+	Success  bool   `json:"success"`
 }
 
 func Start(wsURL string) {
@@ -37,6 +40,7 @@ func Start(wsURL string) {
 	defer conn.Close()
 
 	log.Println("Connected to server!")
+	success := true
 
 	for {
 		_, message, err := conn.ReadMessage()
@@ -60,7 +64,10 @@ func Start(wsURL string) {
 		// Jobbtyper
 		switch job.Type {
 		case "execurl":
-			resultText = handleExecURLJob(job)
+			resultText, err = handleExecURLJob(job)
+			if err != nil {
+				success = false
+			}
 		case "sleep":
 			time.Sleep(time.Duration(job.Duration) * time.Second)
 			resultText = fmt.Sprintf("Slept for %d seconds", job.Duration)
@@ -81,7 +88,9 @@ func Start(wsURL string) {
 			Type:     job.Type,
 			JobId:    job.Id,
 			Result:   resultText,
+			Input:    job.Input,
 			Duration: elapsed,
+			Success:  success,
 		}
 
 		msg, _ := json.Marshal(result)
@@ -91,19 +100,19 @@ func Start(wsURL string) {
 }
 
 // TODO: kolla på och förstå
-func handleExecURLJob(job Job) string {
+func handleExecURLJob(job Job) (string, error) {
 	filename := fmt.Sprintf("job_%s_exec.sh", job.Id)
 
 	// Ladda ner från URL
 	resp, err := http.Get(job.Input)
 	if err != nil {
-		return fmt.Sprintf("Download error: %s", err)
+		return fmt.Sprintf("Download error: %s", err), err
 	}
 	defer resp.Body.Close()
 
 	out, err := os.Create(filename)
 	if err != nil {
-		return fmt.Sprintf("File creation error: %s", err)
+		return fmt.Sprintf("File creation error: %s", err), err
 	}
 	io.Copy(out, resp.Body)
 	out.Close()
@@ -116,8 +125,8 @@ func handleExecURLJob(job Job) string {
 	os.Remove(filename)
 
 	if err != nil {
-		return fmt.Sprintf("Exec error: %s\nOutput: %s", err, output)
+		return fmt.Sprintf("Exec error: %s\nOutput: %s", err, output), err
 	}
 
-	return string(output)
+	return string(output), nil
 }

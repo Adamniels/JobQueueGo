@@ -22,7 +22,7 @@ func main() {
 
 	ipaddr, _ := getLocalIP()
 	fmt.Printf("listening on ip addr: %s, port: %s\n", ipaddr, "8080")
-	fmt.Println("Listening on https://localhost:8080")
+	fmt.Println("Listening on http://localhost:8080")
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", router))
 }
 
@@ -33,7 +33,7 @@ func setupRouter(queue *queue.JobQueue) *http.ServeMux {
 	mux.HandleFunc("/status", handlers.MakeStatusHandler(queue))
 	mux.HandleFunc("/completedJobs", handlers.CompletedJobs)
 
-	mux.HandleFunc("/ws/worker", handlers.WorkerWebSocketHandler)
+	mux.HandleFunc("/ws/worker", handlers.MakeWorkerWebSocketHandler(queue))
 
 	return mux
 }
