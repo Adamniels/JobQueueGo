@@ -14,22 +14,22 @@ import (
 )
 
 // Matchar din Job-struktur på serversidan
+type MsgFromWorker struct {
+	RespType string
+	Res      Result
+}
+type Result struct {
+	Job      Job    `json:"job"`      // jobbet
+	Result   string `json:"result"`   // valfritt: kan vara text, hash etc.
+	Duration int64  `json:"duration"` // hur lång tid jobbet tog i ms
+	Success  bool   `json:"success"`
+}
 type Job struct {
 	Id       string `json:"id"`
 	Type     string `json:"type"`
-	Duration int    `json:"duration,omitempty"` // används för sleep
-	Input    string `json:"input,omitempty"`    // används för hash
-	Attempts int64  `json:"attempts,omitempty"`
-}
-
-type Result struct {
-	RespType string `json:"respType"` // "result"
-	Type     string `json:"type"`
-	JobId    string `json:"jobId"` // koppla till rätt jobb
-	Result   string `json:"result"`
-	Input    string `json:"input"`
-	Duration int64  `json:"duration"` // hur lång tid jobbet tog i ms
-	Success  bool   `json:"success"`
+	Duration int    `json:"duration,omitempty"`
+	Input    string `json:"input,omitempty"`
+	Attempts int    `json:"attempts"`
 }
 
 func Start(wsURL string) {
@@ -84,16 +84,18 @@ func Start(wsURL string) {
 
 		// Skicka tillbaka resultatet
 		result := Result{
-			RespType: "result",
-			Type:     job.Type,
-			JobId:    job.Id,
+			Job: job,
 			Result:   resultText,
-			Input:    job.Input,
 			Duration: elapsed,
-			Success:  success,
+			Success: success,
 		}
 
-		msg, _ := json.Marshal(result)
+		msgFromWorker := MsgFromWorker{
+			RespType: "result",
+			Res: result,
+		}
+
+		msg, _ := json.Marshal(msgFromWorker)
 		conn.WriteMessage(websocket.TextMessage, msg)
 		log.Println("Sent result:", string(msg))
 	}
