@@ -54,39 +54,36 @@ func MakeWorkerWebSocketHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
 				break
 			}
 
-			var result types.Result
-			err = json.Unmarshal(message, &result)
+			var msgFromWorker types.MsgFromWorker
+			err = json.Unmarshal(message, &msgFromWorker)
 			if err != nil {
 				// Inte JSON – skriv ut som vanlig text
 				fmt.Printf("Textmeddelande från worker: %s\n", string(message))
 				continue
 			}
 
-			if !result.Success {
+			if !msgFromWorker.Res.Success && msgFromWorker.Res.Job.Attempts < 3 { // TODO: lägga variabel på ett bättre ställe
 				job := queue.Job{
-					Id:    result.JobId,
-					Type:  result.Type,
-					Input: result.Input,
-					// TODO: borde bara skicka jobbet fram och tillbaka också istället för att ha med alla delar bara
-					// Attempts: ,
+					Id:       msgFromWorker.Res.Job.Id,
+					Type:     msgFromWorker.Res.Job.Type,
+					Input:    msgFromWorker.Res.Job.Input,
+					Attempts: int64(msgFromWorker.Res.Job.Attempts) + 1,
 				}
 				jobQueue.Enqueue(job)
 			}
 
 			// det är ett giltigt JSON-resultat skriv ut resultatet
 			fmt.Printf("Result från worker %s:\n", worker.ID)
-			fmt.Printf("  Job type:  %s\n", result.Type)
-			fmt.Printf("  Job ID:    %s\n", result.JobId)
-			fmt.Printf("  Result:    %s\n", result.Result)
-			fmt.Printf("  Duration:  %d ms\n", result.Duration)
-			fmt.Printf("  Success:   %t", result.Success)
+			fmt.Printf("  Job type:  %s\n", msgFromWorker.RespType)
+			fmt.Printf("  Job ID:    %s\n", msgFromWorker.Res.Job.Id)
+			fmt.Printf("  Result:    %s\n", msgFromWorker.Res.Result)
+			fmt.Printf("  Duration:  %d ms\n", msgFromWorker.Res.Duration)
+			fmt.Printf("  Success:   %t\n", msgFromWorker.Res.Success)
 
 			resultstore.SaveResult(types.Result{
-				Type:     result.Type,
-				JobId:    result.JobId,
-				Result:   result.Result,
-				Duration: result.Duration,
-				Success:  result.Success,
+				Job:      msgFromWorker.Res.Job,
+				Result:   msgFromWorker.Res.Result,
+				Duration: msgFromWorker.Res.Duration,
 			})
 
 			utils.SetWorkerFree(conn)

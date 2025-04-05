@@ -16,7 +16,7 @@ var (
 func SaveResult(res types.Result) {
 	lock.Lock()
 	defer lock.Unlock()
-	storageResult[res.JobId] = res
+	storageResult[res.Job.Id] = res
 }
 
 func GetResultId(id string) (types.Result, bool) {
