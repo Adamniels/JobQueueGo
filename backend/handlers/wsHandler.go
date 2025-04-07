@@ -20,10 +20,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-var (
-	workers     = make(map[*websocket.Conn]*utils.Worker)
-	id      int = 0
-)
+var workers = make(map[*websocket.Conn]*utils.Worker)
 
 func MakeWorkerWebSocketHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -63,11 +60,11 @@ func MakeWorkerWebSocketHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
 			}
 
 			if !msgFromWorker.Res.Success && msgFromWorker.Res.Job.Attempts < 3 { // TODO: lägga variabel på ett bättre ställe
-				job := queue.Job{
+				job := types.Job{
 					Id:       msgFromWorker.Res.Job.Id,
 					Type:     msgFromWorker.Res.Job.Type,
 					Input:    msgFromWorker.Res.Job.Input,
-					Attempts: int64(msgFromWorker.Res.Job.Attempts) + 1,
+					Attempts: int(msgFromWorker.Res.Job.Attempts + 1),
 				}
 				jobQueue.Enqueue(job)
 			}
@@ -79,6 +76,7 @@ func MakeWorkerWebSocketHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
 			fmt.Printf("  Result:    %s\n", msgFromWorker.Res.Result)
 			fmt.Printf("  Duration:  %d ms\n", msgFromWorker.Res.Duration)
 			fmt.Printf("  Success:   %t\n", msgFromWorker.Res.Success)
+			fmt.Printf("  Attempts:  %d\n", msgFromWorker.Res.Job.Attempts)
 
 			resultstore.SaveResult(types.Result{
 				Job:      msgFromWorker.Res.Job,

@@ -7,6 +7,7 @@ import (
 
 	"JobQueueGo/utils"
 	"JobQueueGo/utils/queue"
+	"JobQueueGo/utils/types"
 )
 
 func MakeJobHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
@@ -16,7 +17,7 @@ func MakeJobHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
 			return
 		}
 
-		var job queue.Job
+		var job types.Job
 		err := json.NewDecoder(r.Body).Decode(&job)
 		if err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)

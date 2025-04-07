@@ -1,13 +1,14 @@
 package queue
 
 import (
+	"JobQueueGo/utils/types"
 	"fmt"
 	"sync"
 )
 
 type JobQueue struct {
 	lock  sync.Mutex
-	queue []Job
+	queue []types.Job
 }
 
 // Vad vill jag ha för funktioner
@@ -15,22 +16,22 @@ type JobQueue struct {
 // create/new
 func NewJobQueue() *JobQueue {
 	return &JobQueue{
-		queue: make([]Job, 0),
+		queue: make([]types.Job, 0),
 	}
 }
 
-func (q *JobQueue) Enqueue(job Job) {
+func (q *JobQueue) Enqueue(job types.Job) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	q.queue = append(q.queue, job)
 }
 
-func (q *JobQueue) Dequeue() (Job, bool) {
+func (q *JobQueue) Dequeue() (types.Job, bool) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
 	if len(q.queue) == 0 {
-		return Job{}, false
+		return types.Job{}, false
 	}
 
 	firstJob := q.queue[0]
@@ -45,11 +46,11 @@ func (q *JobQueue) Length() int {
 	return len(q.queue)
 }
 
-func (q *JobQueue) GetAll() []Job {
+func (q *JobQueue) GetAll() []types.Job {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	jobsCopy := make([]Job, len(q.queue))
+	jobsCopy := make([]types.Job, len(q.queue))
 	copy(jobsCopy, q.queue)
 	return jobsCopy
 }
