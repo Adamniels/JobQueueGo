@@ -59,14 +59,10 @@ func MakeWorkerWebSocketHandler(jobQueue *queue.JobQueue) http.HandlerFunc {
 				continue
 			}
 
-			if !msgFromWorker.Res.Success && msgFromWorker.Res.Job.Attempts < 3 { // TODO: lägga variabel på ett bättre ställe
-				job := types.Job{
-					Id:       msgFromWorker.Res.Job.Id,
-					Type:     msgFromWorker.Res.Job.Type,
-					Input:    msgFromWorker.Res.Job.Input,
-					Attempts: int(msgFromWorker.Res.Job.Attempts + 1),
-				}
-				jobQueue.Enqueue(job)
+			msgFromWorker.Res.Job.Attempts++
+
+			if !msgFromWorker.Res.Success && msgFromWorker.Res.Job.Attempts < 3 {
+				jobQueue.Enqueue(msgFromWorker.Res.Job)
 			}
 
 			// det är ett giltigt JSON-resultat skriv ut resultatet

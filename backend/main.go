@@ -10,6 +10,7 @@ import (
 	"JobQueueGo/handlers"
 	"JobQueueGo/utils"
 	"JobQueueGo/utils/queue"
+	"JobQueueGo/utils/resultstore"
 )
 
 func main() {
@@ -17,6 +18,14 @@ func main() {
 
 	jobQueue := queue.NewJobQueue()
 	router := setupRouter(jobQueue)
+
+	err := resultstore.InitDB("results.db")
+	if err != nil {
+		log.Fatalf("failed to init db: %v", err)
+	}
+
+	maxID := resultstore.GetMaxJobIDNumber()
+	utils.SetInitialJobCounter(maxID)
 
 	go matchWorkersWithJobs(jobQueue)
 

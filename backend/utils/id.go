@@ -10,6 +10,12 @@ var (
 	jobCounterLock sync.Mutex
 )
 
+func SetInitialJobCounter(n int64) {
+	jobCounterLock.Lock()
+	defer jobCounterLock.Unlock()
+	jobCounter = n
+}
+
 func GenerateJobID() string {
 	jobCounterLock.Lock()
 	defer jobCounterLock.Unlock()
