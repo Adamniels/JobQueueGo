@@ -13,6 +13,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// WebSocket handler for workers
+// This handler upgrades the HTTP connection to a WebSocket connection
+// and allows workers to send messages back to the server.
+// The handler also manages the connection and keeps track of the workers
+// connected to the server.
+
 // create an instance of a upgrader that allows connections from anyone
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
