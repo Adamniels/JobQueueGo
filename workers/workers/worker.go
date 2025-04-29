@@ -145,7 +145,11 @@ func handleExecURLJob(job Job) (string, error) {
 }
 
 func handleProgramZip(job Job) (string, error) {
-	workDir := fmt.Sprintf("job-%s", job.Id)
+	os.MkdirAll("jobs", 0o755)
+	workDir := fmt.Sprintf("jobs/job-%s", job.Id)
+
+	// Ta bort ev. gammal katalog innan vi skapar ny
+	os.RemoveAll(workDir)
 
 	// 1. Dekoda Base64
 	zipData, err := base64.StdEncoding.DecodeString(job.Input)
@@ -172,6 +176,20 @@ func handleProgramZip(job Job) (string, error) {
 	if err != nil {
 		return "failed to unzip project", err
 	}
+
+	// 4b. Gå in i första undermappen i workDir
+	entries, err := os.ReadDir(workDir)
+	if err != nil {
+		return "failed to read job directory", err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			workDir = filepath.Join(workDir, entry.Name())
+			break
+		}
+	}
+	fmt.Println("workDir:", workDir)
 
 	// 5. Kör "make run" inne i arbetsmappen
 	cmd := exec.Command("make", "run")
